@@ -1,8 +1,11 @@
 import os
 
-from google import genai
+from openai import OpenAI
 
-client = genai.Client(api_key=os.getenv("GENAI_API_KEY"))
+client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
 
 def judge_session(telemetry_text):
     prompt = f"""
@@ -71,9 +74,11 @@ Hiring Summary:
 <one short sentence stating Low risk, Medium risk, or High risk and why>
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=[prompt],
+    response = client.chat.completions.create(
+        model="z-ai/glm-4.5-air:free",
+        messages=[
+            {"role": "user", "content": prompt},
+        ],
     )
 
-    return response.text
+    return response.choices[0].message.content

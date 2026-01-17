@@ -1,10 +1,13 @@
 import os
 
-from google import genai
+from openai import OpenAI
 
 from telemetry import log_event
 
-client = genai.Client(api_key=os.getenv("GENAI_API_KEY"))
+client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
 
 SYSTEM_PROMPT = """
 You are a cautious research agent.
@@ -15,15 +18,15 @@ Never guess.
 def run_agent(user_prompt):
     log_event("USER_PROMPT", user_prompt)
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=[
-            "System:\n" + SYSTEM_PROMPT.strip(),
-            "User:\n" + user_prompt,
+    response = client.chat.completions.create(
+        model="z-ai/glm-4.5-air:free",
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT.strip()},
+            {"role": "user", "content": user_prompt},
         ],
     )
 
-    output = response.text
+    output = response.choices[0].message.content
     log_event("AGENT_OUTPUT", output)
 
     return output
