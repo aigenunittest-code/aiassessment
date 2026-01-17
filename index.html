@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>AgenticScore</title>
+</head>
+<body style="font-family: Arial, sans-serif; margin: 40px;">
+
+<h1>AgenticScore</h1>
+<p><strong>Agentic Reasoning Assessment</strong></p>
+
+<hr>
+
+<h2>Task</h2>
+<pre style="background:#f4f4f4; padding:15px;">{{QUESTION}}</pre>
+
+<h2>Rules</h2>
+{{RULES}}
+
+<hr>
+
+<h3>Your Role</h3>
+<p>
+You are <strong>not</strong> answering the task yourself.
+You are writing <strong>instructions for an AI agent</strong> that will attempt the task.
+</p>
+
+<p>
+We evaluate how you:
+<ul>
+  <li>Control the AI</li>
+  <li>Handle uncertainty</li>
+  <li>Prevent hallucination</li>
+  <li>Respond to failures</li>
+</ul>
+</p>
+
+<h3>Your Instructions to the AI Agent</h3>
+
+<textarea
+  id="prompt"
+  rows="10"
+  cols="90"
+></textarea>
+
+<br><br>
+
+<input type="hidden" id="assessment_id" value="{{ASSESSMENT_ID}}">
+
+<button onclick="runAgent()" style="padding:10px 20px; font-size:16px;">
+  Run Agent
+</button>
+
+<button id="submitBtn" onclick="submitToJudge()" style="padding:10px 20px; font-size:16px; margin-left: 10px;" disabled>
+  Submit
+</button>
+
+<hr>
+
+<h3>Agent Output</h3>
+<pre id="output" style="background:#eef; padding:15px; min-height:120px;"></pre>
+
+<h3>Judge Result</h3>
+<pre id="judge" style="background:#efe; padding:15px; min-height:120px;"></pre>
+
+<script>
+async function runAgent() {
+  const prompt = document.getElementById("prompt").value;
+  const assessmentId = document.getElementById("assessment_id").value;
+
+  const runBtn = document.querySelector('button[onclick="runAgent()"]');
+  const submitBtn = document.getElementById("submitBtn");
+  const outputEl = document.getElementById("output");
+  const judgeEl = document.getElementById("judge");
+
+  if (!prompt.trim()) {
+    alert("Please write instructions for the AI agent.");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  judgeEl.innerText = "";
+  outputEl.innerText = "Running agent...";
+
+  if (runBtn) runBtn.disabled = true;
+
+  try {
+    const res = await fetch(
+      "/run?prompt=" + encodeURIComponent(prompt) +
+      "&assessment_id=" + encodeURIComponent(assessmentId),
+      { method: "POST" }
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || ("Run failed with status " + res.status));
+    }
+
+    const data = await res.json();
+    outputEl.innerText = data.output || "";
+    submitBtn.disabled = false;
+  } catch (e) {
+    outputEl.innerText = "Error running agent: " + (e && e.message ? e.message : String(e));
+  } finally {
+    if (runBtn) runBtn.disabled = false;
+  }
+}
+
+async function submitToJudge() {
+  const submitBtn = document.getElementById("submitBtn");
+  const judgeEl = document.getElementById("judge");
+
+  submitBtn.disabled = true;
+  judgeEl.innerText = "Judging...";
+
+  try {
+    const res = await fetch("/judge", { method: "GET" });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || ("Judge failed with status " + res.status));
+    }
+
+    const data = await res.json();
+    judgeEl.innerText = data.result || "";
+  } catch (e) {
+    judgeEl.innerText = "Error judging session: " + (e && e.message ? e.message : String(e));
+  }
+  // Note: submit button remains disabled until runAgent() runs again
+}
+</script>
+
+</body>
+</html>
